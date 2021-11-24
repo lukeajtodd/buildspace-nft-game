@@ -1,30 +1,47 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// When running the script with `npx hardhat run <script>` you'll find the Hardhat
-// Runtime Environment's members available in the global scope.
 import { ethers } from "hardhat";
 
-async function main() {
-  // Hardhat always runs the compile task when running scripts with its command
-  // line interface.
-  //
-  // If this script is run directly using `node` you may want to call compile
-  // manually to make sure everything is compiled
-  // await hre.run('compile');
+const main = async () => {
+  const gameContractFactory = await ethers.getContractFactory("Game");
+  const gameContract = await gameContractFactory.deploy(
+    ["Tidus", "Wakka", "Yuna"],
+    [
+      "https://i.imgur.com/mUDc2KQ.gif",
+      "https://i.imgur.com/iCBiadT.jpeg",
+      "https://i.imgur.com/kvCZI4B.jpeg",
+    ],
+    [150, 300, 100],
+    [80, 50, 120],
+    "Sin",
+    "http://img2.wikia.nocookie.net/__cb20140201143509/finalfantasy/images/8/85/Sin_in_zanarkand_ruins.png",
+    10000,
+    40
+  );
+  await gameContract.deployed();
+  console.log("Contract deployed to:", gameContract.address);
 
-  // We get the contract to deploy
-  const Greeter = await ethers.getContractFactory("Greeter");
-  const greeter = await Greeter.deploy("Hello, Hardhat!");
+  let txn;
 
-  await greeter.deployed();
+  txn = await gameContract.mintCharacterNFT(2);
+  await txn.wait();
 
-  console.log("Greeter deployed to:", greeter.address);
-}
+  txn = await gameContract.attackBoss();
+  await txn.wait();
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+  txn = await gameContract.attackBoss();
+  await txn.wait();
+
+  // const returnedTokenUri = await gameContract.tokenURI(1);
+  // console.log("Token URI:", returnedTokenUri);
+};
+
+const runMain = async () => {
+  try {
+    await main();
+    process.exitCode = 0;
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 1;
+  }
+};
+
+runMain();

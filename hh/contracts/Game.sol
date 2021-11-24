@@ -25,14 +25,39 @@ contract Game is ERC721 {
 
   mapping(uint256 => Attributes) public nftHolderAttributes;
 
+  struct Boss {
+    string name;
+    string imageURI;
+    uint256 health;
+    uint256 maxHealth;
+    uint256 attack;
+  }
+
+  Boss public bigBoss;
+
   mapping(address => uint256) public nftHolders;
 
   constructor(
     string[] memory characterNames,
     string[] memory characterImageURIs,
     uint256[] memory characterHealth,
-    uint256[] memory characterAttack
+    uint256[] memory characterAttack,
+    string memory bossName,
+    string memory bossImageURI,
+    uint256 bossHealth,
+    uint256 bossAttack
   ) ERC721("Warriors", "WOL") {
+
+    bigBoss = Boss(
+      bossName,
+      bossImageURI,
+      bossHealth,
+      bossHealth,
+      bossAttack
+    );
+
+    console.log("Initialised boss %s with %d health and %d attack", bigBoss.name, bigBoss.health, bigBoss.attack);
+
     for (uint256 i = 0; i < characterNames.length; i++) {
       defaultCharacters.push(
         Attributes(
@@ -76,7 +101,36 @@ contract Game is ERC721 {
       _characterIndex
     );
 
+    nftHolders[msg.sender] = newItemId;
+
     _tokenIds.increment();
+  }
+
+  function attackBoss() public {
+    // Get the state of the player's NFT
+    uint256 tokenId = nftHolders[msg.sender];
+    console.log(msg.sender);
+    Attributes storage player = nftHolderAttributes[tokenId];
+    console.log("Player with character %s is about to attack. They have %d health and %d AD", player.name, player.health, player.attack);
+    console.log("The boss %s has %d health and %d AD", bigBoss.name, bigBoss.health, bigBoss.attack);
+
+    require(player.health > 0, "You cannot attack if you're dead!");
+    require(bigBoss.health > 0, "The boss is already dead!");
+
+    if (bigBoss.health < player.attack) {
+      bigBoss.health = 0;
+    } else {
+      bigBoss.health -= player.attack;
+    }
+
+    if (player.health < bigBoss.attack) {
+      player.health = 0;
+    } else {
+      player.health -= bigBoss.attack;
+    }
+
+    console.log("Player attacked. The boss health is now %d", bigBoss.health);
+    console.log("Boss attacked. The player health is now %d\n", player.health);
   }
 
   function tokenURI(uint256 _tokenId)
