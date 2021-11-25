@@ -37,6 +37,9 @@ contract Game is ERC721 {
 
   mapping(address => uint256) public nftHolders;
 
+  event CharacterNFTMinted(address sender, uint256 _tokenId, uint256 _characterIndex);
+  event AttackComplete(uint newBossHealth, uint newPlayerHealth);
+
   constructor(
     string[] memory characterNames,
     string[] memory characterImageURIs,
@@ -104,6 +107,8 @@ contract Game is ERC721 {
     nftHolders[msg.sender] = newItemId;
 
     _tokenIds.increment();
+
+    emit CharacterNFTMinted(msg.sender, newItemId, _characterIndex);
   }
 
   function attackBoss() public {
@@ -131,6 +136,27 @@ contract Game is ERC721 {
 
     console.log("Player attacked. The boss health is now %d", bigBoss.health);
     console.log("Boss attacked. The player health is now %d\n", player.health);
+
+    emit AttackComplete(bigBoss.health, player.health);
+  }
+
+  function checkIfUserHasNFT() public view returns (Attributes memory) {
+    uint256 tokenId = nftHolders[msg.sender];
+
+    if (tokenId != 0) {
+      return nftHolderAttributes[tokenId];
+    } else {
+      Attributes memory empty;
+      return empty;
+    }
+  }
+
+  function getAllDefaultCharacters() public view returns (Attributes[] memory) {
+    return defaultCharacters;
+  }
+
+  function getBoss() public view returns (Boss memory) {
+    return bigBoss;
   }
 
   function tokenURI(uint256 _tokenId)
