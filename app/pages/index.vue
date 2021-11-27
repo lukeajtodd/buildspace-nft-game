@@ -17,7 +17,7 @@
           <SelectCharacter :selectCharacter="selectCharacter" />
         </template>
         <template v-else>
-          <Arena :selectedCharacter="selectedCharacter"/>
+          <Arena :setCharacter="selectCharacter" :warriorNFT="selectedCharacter"/>
         </template>
       </div>
       <div class="footer-container">
@@ -36,7 +36,7 @@
 import Vue from 'vue'
 import { ethers } from 'ethers'
 import Game from '~/utils/Game.json'
-import { CONTRACT_ADDRESS, transformWarriorData } from '~/utils/constants'
+import { CONTRACT_ADDRESS, transformCharacterData } from '~/utils/constants'
 
 import NotConnected from '~/components/NotConnected.vue'
 import SelectCharacter from '~/components/SelectCharacter.vue'
@@ -44,6 +44,12 @@ import Arena from '~/components/Arena.vue'
 
 const TWITTER_HANDLE = '_buildspace';
 const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
+
+declare global {
+  interface Window {
+    ethereum: any;
+  }
+}
 
 interface BaseComponentData {
   connectedContract: ethers.Contract | null
@@ -76,7 +82,9 @@ export default Vue.extend({
     }
   },
   methods: {
-    selectCharacter() { },
+    selectCharacter(character: any) {
+      this.selectedCharacter = character
+    },
     async checkIfWalletConnected() {
       // @ts-ignore
       const { ethereum } = window
@@ -103,7 +111,7 @@ export default Vue.extend({
 
       const txn = await contract.checkIfUserHasNFT()
       if (txn.name) {
-        this.selectedCharacter = transformWarriorData(txn)
+        this.selectedCharacter = transformCharacterData(txn)
       } else {
         console.log('No warrior NFT found')
       }

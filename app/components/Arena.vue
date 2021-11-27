@@ -1,37 +1,132 @@
 <template>
     <div class="arena-container">
-        <p>BOSS GOES HERE</p>
-        <p>CHARACTER NFT GOES HERE</p>
+        <div v-if="boss" class="boss-container">
+            <div class="boss-content" v-bind:class="attackState">
+                <h2>🔥 {{ boss.name }} 🔥</h2>
+                <div class="image-content">
+                    <img :src="boss.imageURI" :alt="`Boss ${boss.name}&#x60;`" />
+                    <div class="health-bar">
+                        <progress :value="boss.health" :max="boss.maxHealth" />
+                        <p>{{ `${boss.health} / ${boss.maxHealth} HP` }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="attack-container">
+                <button class="cta-button" @click="runAttackAction">{{ `💥 Attack ${boss.name}` }}</button>
+            </div>
+        </div>
+        <div v-if="warriorNFT" class="players-container">
+            <div class="player-container">
+                <h2>Your Character</h2>
+                <div class="player">
+                    <div class="image-content">
+                        <h2>{{ warriorNFT.name }}</h2>
+                        <img
+                            :src="warriorNFT.imageURI"
+                            :alt="`Character ${warriorNFT.name}&#x60;`"
+                        />
+                        <div class="health-bar">
+                            <progress :value="warriorNFT.health" :max="warriorNFT.maxHealth" />
+                            <p>{{`${warriorNFT.health} / ${warriorNFT.maxHealth} HP`}}</p>
+                        </div>
+                    </div>
+                    <div class="stats">
+                        <h4>{{`⚔️ Attack Damage: ${warriorNFT.attack}`}}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
 <script lang="ts">
 import Vue from 'vue'
 import { ethers } from 'ethers'
-import { CONTRACT_ADDRESS, transformWarriorData } from '~/utils/constants'
+import { CONTRACT_ADDRESS, transformCharacterData } from '~/utils/constants'
 import Game from '~/utils/Game.json'
 
 interface componentData {
+    attackState: string
+    boss: any
     contract: ethers.Contract | null
 }
 
 export default Vue.extend({
     name: 'Arena',
     props: {
+        setCharacter: {
+            type: Function,
+            required: true
+        },
         warriorNFT: {
+            type: Object,
             required: true
         }
     },
     data(): componentData {
         return {
+            attackState: '',
+            boss: null,
             contract: null
         }
     },
+    methods: {
+        attackHandler(newBossHealth: any, newPlayerHealth: any) {
+            const bossHealth = newBossHealth.toNumber()
+            const playerHealth = newPlayerHealth.toNumber()
+
+            this.boss = {
+                ...this.boss,
+                health: bossHealth
+            }
+
+            this.setCharacter({
+                ...this.warriorNFT,
+                health: playerHealth
+            })
+        },
+        async runAttackAction() {
+            if (!this.contract) return
+
+            try {
+                this.attackState = 'attacking'
+                const txn = await this.contract.attackBoss()
+                await txn.wait()
+                this.attackState = 'hit'
+            } catch (err) {
+                console.error(err)
+                this.attackState = ''
+            }
+        },
+        configureContact() {
+            const provider = new ethers.providers.Web3Provider(window.ethereum)
+            const signer = provider.getSigner()
+            const contract = new ethers.Contract(CONTRACT_ADDRESS, Game.abi, signer)
+            this.contract = contract
+        },
+        async fetchBoss() {
+            if (!this.contract) return
+
+            try {
+                const txn = await this.contract.getBoss()
+                console.log(txn)
+                this.boss = transformCharacterData(txn)
+            } catch (err) {
+                console.error(err)
+            }
+
+        }
+    },
+    beforeDestroy() {
+        if (!this.contract) return
+        this.contract.off('AttackComplete', this.attackHandler)
+    },
     mounted() {
-        const provider = new ethers.providers.Web3Provider(window.ethereum)
-        const signer = provider.getSigner()
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, Game.abi, signer)
-        this.contract = contract
+        this.configureContact()
+        this.fetchBoss().then(() => {
+            if (!this.contract) return
+            this.contract.on('AttackComplete', this.attackHandler)
+        })
     }
 })
 </script>

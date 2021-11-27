@@ -20,7 +20,7 @@
 <script lang="ts">
 import Vue from 'vue'
 import { ethers } from 'ethers'
-import { CONTRACT_ADDRESS, transformWarriorData } from '~/utils/constants'
+import { CONTRACT_ADDRESS, transformCharacterData } from '~/utils/constants'
 import Game from '~/utils/Game.json'
 
 interface componentData {
@@ -46,7 +46,7 @@ export default Vue.extend({
         async characterMintHandler(sender: any, tokenId: any) {
             if (!this.contract) return
             const warrior = await this.contract.checkIfUserHasNFT()
-            this.selectCharacter(transformWarriorData(warrior))
+            this.selectCharacter(transformCharacterData(warrior))
             alert(`Your NFT is all done -- see it here: https://testnets.opensea.io/assets/${CONTRACT_ADDRESS}/${tokenId.toNumber()}`)
         },
         async mintCharacterNFTAction(index: number) {
@@ -69,7 +69,7 @@ export default Vue.extend({
                 if (!this.contract) return
                 const txn = await this.contract.getAllDefaultCharacters()
 
-                this.warriors = txn.map((data: any) => transformWarriorData(data))
+                this.warriors = txn.map((data: any) => transformCharacterData(data))
                 console.log(this.warriors)
             } catch (err) {
                 console.error('Something went wrong:', err)
