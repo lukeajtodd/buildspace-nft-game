@@ -13,8 +13,11 @@
         <template v-if="!currentAccount">
           <NotConnected :connectWallet="connectWallet" />
         </template>
+        <template v-else-if="currentAccount && !selectedCharacter">
+          <SelectCharacter :selectCharacter="selectCharacter" />
+        </template>
         <template v-else>
-          <button class="cta-button connect-wallet-button">Mint NFT</button>
+          <Arena :selectedCharacter="selectedCharacter"/>
         </template>
       </div>
       <div class="footer-container">
@@ -32,7 +35,12 @@
 <script lang="ts">
 import Vue from 'vue'
 import { ethers } from 'ethers'
-import Game from '../utils/Game.json'
+import Game from '~/utils/Game.json'
+import { CONTRACT_ADDRESS, transformWarriorData } from '~/utils/constants'
+
+import NotConnected from '~/components/NotConnected.vue'
+import SelectCharacter from '~/components/SelectCharacter.vue'
+import Arena from '~/components/Arena.vue'
 
 const TWITTER_HANDLE = '_buildspace';
 const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
@@ -40,6 +48,7 @@ const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
 interface BaseComponentData {
   connectedContract: ethers.Contract | null
   currentAccount: string | null
+  selectedCharacter: any
   twitterHandle: string
   twitterLink: string
 }
@@ -49,11 +58,25 @@ export default Vue.extend({
     return {
       connectedContract: null,
       currentAccount: null,
+      selectedCharacter: null,
       twitterLink: TWITTER_LINK,
       twitterHandle: TWITTER_HANDLE,
     };
   },
+  components: {
+    notConnected: NotConnected,
+    selectCharacter: SelectCharacter,
+    arean: Arena
+  },
+  watch: {
+    currentAccount(v) {
+      if (v) {
+        this.checkIfUserHasWarrior()
+      }
+    }
+  },
   methods: {
+    selectCharacter() { },
     async checkIfWalletConnected() {
       // @ts-ignore
       const { ethereum } = window
@@ -72,6 +95,19 @@ export default Vue.extend({
       } else {
         console.log('No accounts found')
       }
+    },
+    async checkIfUserHasWarrior() {
+      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const signer = provider.getSigner()
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, Game.abi, signer)
+
+      const txn = await contract.checkIfUserHasNFT()
+      if (txn.name) {
+        this.selectedCharacter = transformWarriorData(txn)
+      } else {
+        console.log('No warrior NFT found')
+      }
+
     },
     async verifyRinkebyNetwork() {
       // @ts-ignore
@@ -117,7 +153,7 @@ export default Vue.extend({
     configureConnectedContract(): any {
       // @ts-ignore
       const { ethereum } = window
-      const CONTRACT_ADDRESS = "0xf587c1F50beF9A743Fbc72EA40AEE50B933e84A7"
+      const contractAddress: string = CONTRACT_ADDRESS
 
       if (!ethereum) {
         console.log("Ethereum object doesn't exist!")
@@ -130,7 +166,7 @@ export default Vue.extend({
         const provider = new ethers.providers.Web3Provider(ethereum);
         const signer = provider.getSigner();
 
-        this.connectedContract = new ethers.Contract(CONTRACT_ADDRESS, Game.abi, signer)
+        this.connectedContract = new ethers.Contract(contractAddress, Game.abi, signer)
         // if (this.connectedContract) {
         //   this.connectedContract.on("NewNFTMinted", (from, tokenId) => {
         //     console.log(from, tokenId.toNumber())
@@ -142,6 +178,7 @@ export default Vue.extend({
   },
   mounted() {
     this.checkIfWalletConnected()
+    this.checkIfUserHasWarrior()
   },
 })
 </script>
